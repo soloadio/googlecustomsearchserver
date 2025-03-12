@@ -2,6 +2,10 @@
 
 A Model Context Protocol (MCP) server that provides web search capabilities through Google's Custom Search API. This server enables Language Learning Models (LLMs) to perform web searches using a standardized interface.
 
+<a href="https://glama.ai/mcp/servers/y1s99uqqq6">
+  <img width="380" height="200" src="https://glama.ai/mcp/servers/y1s99uqqq6/badge" alt="Google Custom Search Server MCP server" />
+</a>
+
 ## 🌟 Features
 
 - Seamless integration with Google Custom Search API
