@@ -39,7 +39,7 @@ Before you begin, ensure you have:
 1. Clone the repository:
 
    ```bash
-   git clone https://github.com/yourusername/mcp-google-custom-search-server.git
+   git clone https://github.com/limklister/mcp-google-custom-search-server.git
    cd mcp-google-custom-search-server
    ```
 
