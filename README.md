@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/limklister-mcp-google-custom-search-server-badge.png)](https://mseep.ai/app/limklister-mcp-google-custom-search-server)
+
 # MCP Google Custom Search Server
 
 A Model Context Protocol (MCP) server that provides web search capabilities through Google's Custom Search API. This server enables Language Learning Models (LLMs) to perform web searches using a standardized interface.
