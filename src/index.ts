@@ -1,45 +1,45 @@
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import {
-  CallToolRequestSchema,
-  ListToolsRequestSchema,
-} from "@modelcontextprotocol/sdk/types.js";
+import express from "express";
+import dotenv from "dotenv";
 import { z } from "zod";
-import { customsearch_v1, customsearch } from '@googleapis/customsearch';
-import dotenv from 'dotenv';
+import { customsearch_v1, customsearch } from "@googleapis/customsearch";
 
-// Load environment variables from .env file
+// Load environment variables
 dotenv.config();
 
-// Schema for environment variables
-export const EnvSchema = z.object({
-  GOOGLE_API_KEY: z.string().min(1, "Google API Key is required"),
-  GOOGLE_SEARCH_ENGINE_ID: z.string().min(1, "Search Engine ID is required"),
+// Validate environment variables
+const EnvSchema = z.object({
+  GOOGLE_API_KEY: z.string().min(1),
+  GOOGLE_SEARCH_ENGINE_ID: z.string().min(1),
 });
-
-// Parse and validate environment variables
 const env = EnvSchema.safeParse(process.env);
-
 if (!env.success) {
   console.error("❌ Invalid environment variables:", env.error.flatten().fieldErrors);
   process.exit(1);
 }
-
-// Now we have properly typed environment variables
 const { GOOGLE_API_KEY, GOOGLE_SEARCH_ENGINE_ID } = env.data;
 
-// Initialize the Custom Search API client
-const searchClient = customsearch('v1');
+// Initialize Custom Search API client
+const searchClient = customsearch("v1");
 
-// Schema for validating search arguments
-export const SearchArgumentsSchema = z.object({
+// Express server setup
+const app = express();
+app.use(express.json());
+
+// Root route for testing
+app.get("/", (_req, res) => {
+  res.send("MCP Google Custom Search server is running!");
+});
+
+// /search POST endpoint
+const SearchArgumentsSchema = z.object({
   query: z.string().min(1),
   numResults: z.number().min(1).max(10).optional().default(5),
 });
 
-// Helper function to perform Google Custom Search
-export async function performSearch(query: string, numResults: number): Promise<customsearch_v1.Schema$Search> {
+app.post("/search", async (req, res) => {
   try {
+    const { query, numResults } = SearchArgumentsSchema.parse(req.body);
+
     const response = await searchClient.cse.list({
       auth: GOOGLE_API_KEY,
       cx: GOOGLE_SEARCH_ENGINE_ID,
@@ -47,131 +47,27 @@ export async function performSearch(query: string, numResults: number): Promise<
       num: numResults,
     });
 
-    return response.data;
+    const results = response.data.items?.map((item, index) => ({
+      resultNumber: index + 1,
+      title: item.title || "No title",
+      url: item.link || "No URL",
+      description: item.snippet || "No description",
+    })) || [];
+
+    res.json({ results });
   } catch (error) {
-    console.error("Error performing search:", error);
-    throw error;
-  }
-}
-
-// Format search results
-export function formatSearchResults(searchData: customsearch_v1.Schema$Search): string {
-  if (!searchData.items || searchData.items.length === 0) {
-    return JSON.stringify({ message: "No results found.", results: [] });
-  }
-
-  const results = searchData.items.map((item, index) => ({
-    resultNumber: index + 1,
-    title: item.title || "No title",
-    url: item.link || "No URL",
-    description: item.snippet || "No description",
-  }));
-
-  return JSON.stringify({ results }, null, 2); // Pretty-prints with 2 spaces
-}
-
-// Setup server function (exported for testing)
-export default async function setupServer(): Promise<Server> {
-  // Create server instance
-  const server = new Server(
-    {
-      name: "google-custom-search",
-      version: "1.0.0",
-    },
-    {
-      capabilities: {
-        tools: {},
-      },
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: error.errors });
     }
-  );
-
-  // List available tools
-  server.setRequestHandler(ListToolsRequestSchema, async () => {
-    return {
-      tools: [
-        {
-          name: "search",
-          description: "Search the web using Google Custom Search API",
-          inputSchema: {
-            type: "object",
-            properties: {
-              query: {
-                type: "string",
-                description: "The search query",
-              },
-              numResults: {
-                type: "number",
-                description: "Number of results to return (max 10)",
-                default: 5,
-              },
-            },
-            required: ["query"],
-          },
-        },
-      ],
-    };
-  });
-
-  // Handle tool execution
-  server.setRequestHandler(CallToolRequestSchema, async (request) => {
-    const { name, arguments: args } = request.params;
-
-    try {
-      if (name === "search") {
-        const { query, numResults } = SearchArgumentsSchema.parse(args);
-        
-        const searchResults = await performSearch(query, numResults);
-        const formattedResults = formatSearchResults(searchResults);
-
-        return {
-          content: [
-            {
-              type: "text",
-              text: formattedResults,
-            },
-          ],
-        };
-      } else {
-        throw new Error(`Unknown tool: ${name}`);
-      }
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        throw new Error(
-          `Invalid arguments: ${error.errors
-            .map((e) => `${e.path.join(".")}: ${e.message}`)
-            .join(", ")}`
-        );
-      }
-      
-      // Improve error handling for API errors
-      if (error instanceof Error) {
-        return {
-          content: [
-            {
-              type: "text",
-              text: `Search failed: ${error.message}`,
-            },
-          ],
-        };
-      }
-      throw error;
-    }
-  });
-
-  return server;
-}
-
-// Start the server
-if (import.meta.url === `file://${process.argv[1]}`) {
-  async function main() {
-    const server = await setupServer();
-    const transport = new StdioServerTransport();
-    await server.connect(transport);
-    console.error("Google Custom Search MCP Server running on stdio");
+    console.error("Search error:", error);
+    res.status(500).json({ error: "Search failed" });
   }
+});
 
-  main().catch((error) => {
-    console.error("Fatal error in main():", error);
-    process.exit(1);
-  });
+// Start server if running locally
+if (process.env.VERCEL === undefined) {
+  const port = process.env.PORT || 3000;
+  app.listen(port, () => console.log(`Server running at http://localhost:${port}`));
 }
+
+export default app;
