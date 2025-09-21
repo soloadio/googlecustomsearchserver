@@ -1,6 +1,6 @@
 import express from "express";
 import bodyParser from "body-parser";
-import { performSearch, formatSearchResults } from "./build/index.js";
+import { performSearch, formatSearchResults } from "./index.js";
 
 const app = express();
 app.use(bodyParser.json());
@@ -21,7 +21,12 @@ app.post("/search", async (req, res) => {
   }
 });
 
+app.get("/", (req, res) => {
+  res.send("MCP search server is running!");
+});
+
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`MCP search server running on port ${PORT}`);
 });
+
