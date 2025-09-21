@@ -13,9 +13,11 @@
     "test:coverage": "NODE_OPTIONS=--experimental-vm-modules jest --coverage"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "latest",
     "@googleapis/customsearch": "^1.0.0",
+    "@modelcontextprotocol/sdk": "latest",
+    "body-parser": "^2.2.0",
     "dotenv": "^16.3.1",
+    "express": "^5.1.0",
     "zod": "^3.22.4"
   },
   "devDependencies": {

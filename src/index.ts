@@ -57,20 +57,17 @@ export async function performSearch(query: string, numResults: number): Promise<
 // Format search results
 export function formatSearchResults(searchData: customsearch_v1.Schema$Search): string {
   if (!searchData.items || searchData.items.length === 0) {
-    return "No results found.";
+    return JSON.stringify({ message: "No results found.", results: [] });
   }
 
-  const formattedResults = searchData.items.map((item, index) => {
-    return [
-      `Result ${index + 1}:`,
-      `Title: ${item.title || 'No title'}`,
-      `URL: ${item.link || 'No URL'}`,
-      `Description: ${item.snippet || 'No description'}`,
-      "---",
-    ].join("\n");
-  });
+  const results = searchData.items.map((item, index) => ({
+    resultNumber: index + 1,
+    title: item.title || "No title",
+    url: item.link || "No URL",
+    description: item.snippet || "No description",
+  }));
 
-  return formattedResults.join("\n\n");
+  return JSON.stringify({ results }, null, 2); // Pretty-prints with 2 spaces
 }
 
 // Setup server function (exported for testing)
