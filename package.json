@@ -6,6 +6,7 @@
   "main": "build/index.js",
   "scripts": {
     "build": "tsc",
+    "vercel-build": "npm run build",
     "start": "node build/index.js",
     "dev": "tsc -w",
     "test": "NODE_OPTIONS=--experimental-vm-modules jest",
